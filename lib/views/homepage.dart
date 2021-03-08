@@ -10,7 +10,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  var API_KEY = "ca2fc75d93296fd8a95aee4ea886026c";
+  static const API_KEY = "ca2fc75d93296fd8a95aee4ea886026c";
   var temp;
   var description;
   var currently;
@@ -19,13 +19,13 @@ class _HomePageState extends State<HomePage> {
 
   Future getWeather() async {
     http.Response response = await http.get(
-        'https://api.openweathermap.org/data/2.5/weather?q=London&appid=ca2fc75d93296fd8a95aee4ea886026c');
+        'https://api.openweathermap.org/data/2.5/weather?q=London&appid=$API_KEY');
     var result = jsonDecode(response.body);
 
     setState(() {
       this.temp = result['main']['temp'];
       this.description = result['weather'][0]['description'];
-      this.currently = result['weather'][0]['main'];;
+      this.currently = result['weather'][0]['main'];
       this.humidity = result['main']['humidity'];
       this.windSPeed = result['wind']['speed'];
     });
