@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter_weather_app/viewmodels/city_entry_viewmodel.dart';
+import 'package:flutter_weather_app/viewmodels/forecast_viewmodel.dart';
+import 'package:flutter_weather_app/views/homescreen.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider<CityEntryViewModel>(
+        create: (_) => CityEntryViewModel()),
+    ChangeNotifierProvider<ForecastViewModel>(
+        create: (_) => ForecastViewModel()),
+  ], child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Weather App',
+    return MaterialApp(
+      title: 'Weather Provider',
+      home: HomeScreen(),
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: Container(),
     );
   }
 }

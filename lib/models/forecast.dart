@@ -1,4 +1,5 @@
 import 'package:flutter_weather_app/models/weather.dart';
+import 'package:intl/intl.dart';
 
 class Forecast {
   final DateTime lastUpdated;
@@ -46,18 +47,18 @@ class Forecast {
           .toList();
     }
 
-    var currentForcast = Weather(
+    var currentForecast = Weather(
         cloudiness: int.parse(json['current']['clouds'].toString()),
         temp: json['current']['temp'].toDouble(),
         condition: Weather.mapStringToWeatherCondition(
             weather['main'], int.parse(json['current']['clouds'].toString())),
-        description: weather['description'],
+        description: toBeginningOfSentenceCase(weather['description']),
         feelLikeTemp: json['current']['feels_like'],
         date: date);
 
     return Forecast(
         lastUpdated: DateTime.now(),
-        current: currentForcast,
+        current: currentForecast,
         latitude: json['lat'].toDouble(),
         longitude: json['lon'].toDouble(),
         daily: tempDaily,

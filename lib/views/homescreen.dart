@@ -1,12 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_weather_app/models/forecast_data.dart';
-import 'package:flutter_weather_app/models/weather_data.dart';
-import 'package:flutter_weather_app/models/weather_item.dart';
-import 'package:flutter_weather_app/widgets/weather.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_weather_app/models/weather.dart';
+import 'package:flutter_weather_app/utils/gradient_container.dart';
+import 'package:flutter_weather_app/viewmodels/city_entry_viewmodel.dart';
+import 'package:flutter_weather_app/viewmodels/forecast_viewmodel.dart';
+import 'package:flutter_weather_app/views/city_entry_view.dart';
+import 'package:flutter_weather_app/views/daily_summary_view.dart';
+import 'package:flutter_weather_app/views/last_updated_view.dart';
+import 'package:flutter_weather_app/views/location_view.dart';
+import 'package:flutter_weather_app/views/weather_description_view.dart';
+import 'package:flutter_weather_app/views/weather_summary_view.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -14,109 +17,136 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isLoading = true;
-  WeatherData weatherData;
-  ForecastData forecastData;
-
-  static const API_KEY = 'ca2fc75d93296fd8a95aee4ea886026c';
-
-  loadWeather() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    Position position;
-    try {
-      position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low);
-    } catch (e) {
-      print(e);
-    }
-
-    if (position != null) {
-      final lat = position.latitude;
-      final lon = position.longitude;
-
-      final weatherResponse = await http.get(
-          'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&appid=$API_KEY');
-
-      final forecastResponse = await http.get(
-          'https://api.openweathermap.org/data/2.5/forecast?lat=$lat&lon=$lon&appid=$API_KEY');
-
-      if (weatherResponse.statusCode == 200 &&
-          forecastResponse.statusCode == 200) {
-        return setState(() {
-          weatherData =
-              new WeatherData.fromJson(jsonDecode(weatherResponse.body));
-          forecastData =
-              new ForecastData.fromJson(jsonDecode(forecastResponse.body));
-          isLoading = false;
-        });
-      }
-    }
-  }
-
   @override
   void initState() {
     super.initState();
-    loadWeather();
+
+    onStart();
+  }
+
+  Future<void> onStart() async {
+    // any init in here ?
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Weather App'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: weatherData != null
-                        ? Weather(weatherData: weatherData)
-                        : Container(),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: isLoading
-                        ? CircularProgressIndicator(
-                            strokeWidth: 2.0,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          )
-                        : IconButton(
-                            icon: Icon(Icons.refresh),
-                            tooltip: 'Refresh',
-                            onPressed: () => loadWeather(),
-                            color: Colors.white,
-                          ),
-                  ),
-                ],
-              ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Container(
-                  height: 200,
-                  child: forecastData != null
-                      ? ListView.builder(
-                          itemCount: forecastData.list.length,
-                          scrollDirection: Axis.horizontal,
-                          itemBuilder: (context, index) => WeatherItem(
-                              weatherData: forecastData.list.elementAt(index)))
-                      : Container(),
-                ),
-              ),
-            )
-          ],
-        ),
+    return Consumer<ForecastViewModel>(
+      builder: (context, model, child) => Scaffold(
+        body: _buildGradientContainer(
+            model.condition, model.isDaytime, buildHomeView(context)),
       ),
     );
+  }
+
+  Widget buildHomeView(BuildContext context) {
+    return Consumer<ForecastViewModel>(
+        builder: (context, weatherViewModel, child) => Container(
+            height: MediaQuery.of(context).size.height,
+            child: RefreshIndicator(
+                color: Colors.transparent,
+                backgroundColor: Colors.transparent,
+                onRefresh: () => refreshWeather(weatherViewModel, context),
+                child: ListView(
+                  children: <Widget>[
+                    CityEntryView(),
+                    weatherViewModel.isRequestPending
+                        ? buildBusyIndicator()
+                        : weatherViewModel.isRequestError
+                            ? Center(
+                                child: Text('Ooops...something went wrong',
+                                    style: TextStyle(
+                                        fontSize: 21, color: Colors.white)))
+                            : Column(children: [
+                                LocationView(
+                                  longitude: weatherViewModel.longitude,
+                                  latitude: weatherViewModel.latitide,
+                                  city: weatherViewModel.city,
+                                ),
+                                SizedBox(height: 50),
+                                WeatherSummary(
+                                    condition: weatherViewModel.condition,
+                                    temp: weatherViewModel.temp,
+                                    feelsLike: weatherViewModel.feelsLike,
+                                    isdayTime: weatherViewModel.isDaytime),
+                                SizedBox(height: 20),
+                                WeatherDescriptionView(
+                                    weatherDescription:
+                                        weatherViewModel.description),
+                                SizedBox(height: 140),
+                                buildDailySummary(weatherViewModel.daily),
+                                LastUpdatedView(
+                                    lastUpdatedOn:
+                                        weatherViewModel.lastUpdated),
+                              ]),
+                  ],
+                ))));
+  }
+
+  Widget buildBusyIndicator() {
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      CircularProgressIndicator(
+          valueColor: new AlwaysStoppedAnimation<Color>(Colors.white)),
+      SizedBox(
+        height: 20,
+      ),
+      Text('Please Wait...',
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.white,
+            fontWeight: FontWeight.w300,
+          ))
+    ]);
+  }
+
+  Widget buildDailySummary(List<Weather> dailyForecast) {
+    return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: dailyForecast
+            .map((item) => new DailySummaryView(
+                  weather: item,
+                ))
+            .toList());
+  }
+
+  Future<void> refreshWeather(
+      ForecastViewModel weatherVM, BuildContext context) {
+    // get the current city
+    String city = Provider.of<CityEntryViewModel>(context, listen: false).city;
+    return weatherVM.getLatestWeather(city);
+  }
+
+  GradientContainer _buildGradientContainer(
+      WeatherCondition condition, bool isDayTime, Widget child) {
+    GradientContainer container;
+
+    // if night time then just default to a blue/grey
+    if (isDayTime != null && !isDayTime)
+      container = GradientContainer(color: Colors.blueGrey, child: child);
+    else {
+      switch (condition) {
+        case WeatherCondition.clear:
+        case WeatherCondition.lightCloud:
+          container = GradientContainer(color: Colors.yellow, child: child);
+          break;
+        case WeatherCondition.fog:
+        case WeatherCondition.atmosphere:
+        case WeatherCondition.rain:
+        case WeatherCondition.drizzle:
+        case WeatherCondition.mist:
+        case WeatherCondition.heavyCloud:
+          container = GradientContainer(color: Colors.indigo, child: child);
+          break;
+        case WeatherCondition.snow:
+          container = GradientContainer(color: Colors.lightBlue, child: child);
+          break;
+        case WeatherCondition.thunderstorm:
+          container = GradientContainer(color: Colors.deepPurple, child: child);
+          break;
+        default:
+          container = GradientContainer(color: Colors.lightBlue, child: child);
+      }
+    }
+
+    return container;
   }
 }
