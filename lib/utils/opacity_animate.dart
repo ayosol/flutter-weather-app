@@ -34,7 +34,7 @@ class _OpacityAnimateState extends State<OpacityAnimate> {
           );
         },
         onEnd: () {
-          Get.off(HomeScreen());
+          Get.off(() => HomeScreen());
         },
       ),
     );
