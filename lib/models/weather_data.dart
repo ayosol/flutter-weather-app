@@ -5,7 +5,7 @@ class WeatherData {
   final double pressure;
   final double humidity;
   final double windSpeed;
-  final String main;
+  final String weatherType;
   final String icon;
 
   WeatherData({
@@ -15,7 +15,7 @@ class WeatherData {
     this.pressure,
     this.humidity,
     this.windSpeed,
-    this.main,
+    this.weatherType,
     this.icon,
   });
 
@@ -25,7 +25,7 @@ class WeatherData {
       date: new DateTime.fromMicrosecondsSinceEpoch(json['dt'] * 1000,
           isUtc: false),
       temp: json['main']['temp'].toDouble(),
-      main: json['weather'][0]['main'],
+      weatherType: json['weather'][0]['main'],
       windSpeed: json['wind']['speed'],
       icon: json['weather'][0]['icon'],
       humidity: json['main']['humidity'].toDouble(),

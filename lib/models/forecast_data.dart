@@ -14,7 +14,7 @@ class ForecastData {
         date: new DateTime.fromMicrosecondsSinceEpoch(e['dt'] * 1000,
             isUtc: false),
         temp: e['main']['temp'].toDouble(),
-        main: e['weather'][0]['main'],
+        weatherType: e['weather'][0]['main'],
         icon: e['weather'][0]['icon'],
       );
       list.add(w);
